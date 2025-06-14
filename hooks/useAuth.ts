@@ -121,9 +121,12 @@ export function useAuth() {
           nom_complet: profileData.nom_complet,
           telephone: profileData.telephone,
           adresse: profileData.adresse,
+          email: null,
+          whatsapp: null,
+          bio: null,
           // Set default values for required fields
           langue_preferee: 'Hausa' as const,
-          type_utilisateur: 'producteur' as const,
+          type_utilisateur: ['producteur'] as const,
           cultures_pratiquees: [],
           profil_verifie: false,
         };

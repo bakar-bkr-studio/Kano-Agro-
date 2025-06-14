@@ -435,7 +435,25 @@ export default function HomeScreen() {
                 <View style={styles.profileInfo}>
                   <Text style={styles.profileName}>{profile.nom_complet}</Text>
                   <Text style={styles.profileType}>
-                    {profile.type_utilisateur || 'Producteur'}
+                    {Array.isArray(profile.type_utilisateur) && profile.type_utilisateur.length > 0
+                      ? profile.type_utilisateur
+                          .map((t) =>
+                            t === 'producteur'
+                              ? 'Producteur'
+                              : t === 'acheteur'
+                              ? 'Acheteur'
+                              : t === 'prestataire_service'
+                              ? 'Prestataire'
+                              : t === 'agent'
+                              ? 'Agent agricole'
+                              : t === 'cooperative'
+                              ? 'Coopérative'
+                              : t === 'transformateur'
+                              ? 'Transformateur'
+                              : t
+                          )
+                          .join(', ')
+                      : 'Producteur'}
                   </Text>
                   {profile.cultures_pratiquees && profile.cultures_pratiquees.length > 0 && (
                     <Text style={styles.profileCultures}>
