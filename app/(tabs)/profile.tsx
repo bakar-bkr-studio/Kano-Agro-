@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { User, Phone, MapPin, Building, Globe, Camera, CreditCard as Edit3, Save, X, Settings, Shield, Activity, Award, Users, Calendar, LogOut, Leaf, TrendingUp, Package, Clock } from 'lucide-react-native';
+import { User, Phone, MapPin, Building, Globe, Camera, CreditCard as Edit3, Save, X, Settings, Shield, Activity, Award, Users, Calendar, LogOut, Leaf, TrendingUp, Package, Clock, Mail } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserStats } from '@/hooks/useUserStats';
@@ -33,7 +33,7 @@ const profileSections: ProfileSection[] = [
     id: 'basic',
     title: 'Informations de base',
     icon: User,
-    fields: ['nom_complet', 'nom_societe', 'telephone', 'langue_preferee'],
+    fields: ['nom_complet', 'nom_societe', 'telephone', 'email', 'whatsapp', 'langue_preferee'],
   },
   {
     id: 'location',
@@ -45,7 +45,7 @@ const profileSections: ProfileSection[] = [
     id: 'personal',
     title: 'Informations personnelles',
     icon: Shield,
-    fields: ['sexe', 'age_fourchette'],
+    fields: ['sexe', 'age_fourchette', 'bio'],
   },
   {
     id: 'agricultural',
@@ -69,7 +69,14 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (profile) {
-      setFormData(profile);
+      setFormData({
+        ...profile,
+        type_utilisateur: Array.isArray(profile.type_utilisateur)
+          ? profile.type_utilisateur
+          : profile.type_utilisateur
+          ? [profile.type_utilisateur]
+          : [],
+      });
     }
   }, [profile]);
 
@@ -108,6 +115,9 @@ export default function ProfileScreen() {
         ...formData,
         nom_societe: formData.nom_societe === '' ? null : formData.nom_societe,
         telephone: formData.telephone === '' ? null : formData.telephone,
+        email: formData.email === '' ? null : formData.email,
+        whatsapp: formData.whatsapp === '' ? null : formData.whatsapp,
+        bio: formData.bio === '' ? null : formData.bio,
         lga: formData.lga === '' ? null : formData.lga,
         village_quartier: formData.village_quartier === '' ? null : formData.village_quartier,
         age_fourchette: formData.age_fourchette === '' ? null : formData.age_fourchette,
@@ -119,6 +129,7 @@ export default function ProfileScreen() {
         Alert.alert('Erreur', 'Impossible de mettre à jour le profil.');
       } else {
         Alert.alert('Succès', 'Profil mis à jour avec succès !');
+        await Promise.all([refreshStats(), refreshAnnonces()]);
         setEditingSection(null);
       }
     } catch (error) {
@@ -163,6 +174,15 @@ export default function ProfileScreen() {
       cultures_pratiquees: prev.cultures_pratiquees?.includes(cultureName)
         ? prev.cultures_pratiquees.filter((c: string) => c !== cultureName)
         : [...(prev.cultures_pratiquees || []), cultureName],
+    }));
+  };
+
+  const toggleUserType = (typeKey: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      type_utilisateur: prev.type_utilisateur?.includes(typeKey)
+        ? prev.type_utilisateur.filter((t: string) => t !== typeKey)
+        : [...(prev.type_utilisateur || []), typeKey],
     }));
   };
 
@@ -223,6 +243,44 @@ export default function ProfileScreen() {
                 value={value || ''}
                 onChangeText={(text) => setFormData((prev: any) => ({ ...prev, [fieldName]: text }))}
                 placeholder="Votre numéro de téléphone"
+                keyboardType="phone-pad"
+              />
+            ) : (
+              <Text style={styles.fieldValue}>{value || 'Non renseigné'}</Text>
+            )}
+          </View>
+        );
+
+      case 'email':
+        return (
+          <View key={fieldName} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Email</Text>
+            <Text style={styles.fieldHelp}>Pour les notifications et la récupération de compte</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.textInput}
+                value={value || ''}
+                onChangeText={(text) => setFormData((prev: any) => ({ ...prev, [fieldName]: text }))}
+                placeholder="Votre adresse email"
+                keyboardType="email-address"
+              />
+            ) : (
+              <Text style={styles.fieldValue}>{value || 'Non renseigné'}</Text>
+            )}
+          </View>
+        );
+
+      case 'whatsapp':
+        return (
+          <View key={fieldName} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>WhatsApp</Text>
+            <Text style={styles.fieldHelp}>Votre numéro WhatsApp sera utilisé pour faciliter les contacts directs sur la marketplace.</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.textInput}
+                value={value || ''}
+                onChangeText={(text) => setFormData((prev: any) => ({ ...prev, [fieldName]: text }))}
+                placeholder="Numéro WhatsApp"
                 keyboardType="phone-pad"
               />
             ) : (
@@ -407,6 +465,25 @@ export default function ProfileScreen() {
           </View>
         );
 
+      case 'bio':
+        return (
+          <View key={fieldName} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Bio</Text>
+            <Text style={styles.fieldHelp}>Courte description de votre profil ou de votre activité</Text>
+            {isEditing ? (
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={value || ''}
+                onChangeText={(text) => setFormData((prev: any) => ({ ...prev, [fieldName]: text }))}
+                placeholder="Quelques mots sur vous"
+                multiline
+              />
+            ) : (
+              <Text style={styles.fieldValue}>{value || 'Non renseigné'}</Text>
+            )}
+          </View>
+        );
+
       case 'type_utilisateur':
         return (
           <View key={fieldName} style={styles.fieldContainer}>
@@ -425,14 +502,14 @@ export default function ProfileScreen() {
                     key={type.key}
                     style={[
                       styles.optionButton,
-                      value === type.key && styles.optionButtonSelected,
+                      (value || []).includes(type.key) && styles.optionButtonSelected,
                     ]}
-                    onPress={() => setFormData((prev: any) => ({ ...prev, [fieldName]: type.key }))}
+                    onPress={() => toggleUserType(type.key)}
                   >
                     <Text
                       style={[
                         styles.optionText,
-                        value === type.key && styles.optionTextSelected,
+                        (value || []).includes(type.key) && styles.optionTextSelected,
                       ]}
                     >
                       {type.label}
@@ -442,13 +519,25 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <Text style={styles.fieldValue}>
-                {value === 'producteur' ? 'Producteur' :
-                 value === 'acheteur' ? 'Acheteur' :
-                 value === 'prestataire_service' ? 'Prestataire' :
-                 value === 'agent' ? 'Agent agricole' :
-                 value === 'cooperative' ? 'Coopérative' :
-                 value === 'transformateur' ? 'Transformateur' :
-                 'Non renseigné'}
+                {value && value.length > 0
+                  ? value
+                      .map((v: string) =>
+                        v === 'producteur'
+                          ? 'Producteur'
+                          : v === 'acheteur'
+                          ? 'Acheteur'
+                          : v === 'prestataire_service'
+                          ? 'Prestataire'
+                          : v === 'agent'
+                          ? 'Agent agricole'
+                          : v === 'cooperative'
+                          ? 'Coopérative'
+                          : v === 'transformateur'
+                          ? 'Transformateur'
+                          : v
+                      )
+                      .join(', ')
+                  : 'Non renseigné'}
               </Text>
             )}
           </View>
@@ -1067,6 +1156,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  fieldHelp: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
   textInput: {
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
@@ -1077,6 +1172,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 16,
     color: '#111827',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   optionsContainer: {
     flexDirection: 'row',

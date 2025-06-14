@@ -15,6 +15,9 @@ export interface Database {
           nom_complet: string
           nom_societe: string | null
           telephone: string | null
+          email: string | null
+          whatsapp: string | null
+          bio: string | null
           adresse: string | null
           langue_preferee: 'Hausa' | 'Anglais' | 'Français' | null
           etat: string | null
@@ -24,7 +27,14 @@ export interface Database {
           sexe: 'Homme' | 'Femme' | 'Préfère ne pas dire' | null
           age_fourchette: '18-25' | '26-35' | '36-45' | '46-55' | '56-65' | '65+' | null
           type_agriculteur: 'petit_exploitant' | 'moyen_exploitant' | 'grand_exploitant' | 'cooperative' | null
-          type_utilisateur: 'producteur' | 'acheteur' | 'prestataire_service' | 'agent' | 'cooperative' | 'transformateur' | null
+          type_utilisateur: (
+            | 'producteur'
+            | 'acheteur'
+            | 'prestataire_service'
+            | 'agent'
+            | 'cooperative'
+            | 'transformateur'
+          )[] | null
           superficie_exploitation: number | null
           superficie_fourchette: 'Moins de 1 ha' | '1-3 ha' | '3-10 ha' | '10-50 ha' | 'Plus de 50 ha' | null
           cultures_pratiquees: string[]
@@ -39,6 +49,9 @@ export interface Database {
           nom_complet: string
           nom_societe?: string | null
           telephone?: string | null
+          email?: string | null
+          whatsapp?: string | null
+          bio?: string | null
           adresse?: string | null
           langue_preferee?: 'Hausa' | 'Anglais' | 'Français' | null
           etat?: string | null
@@ -48,7 +61,14 @@ export interface Database {
           sexe?: 'Homme' | 'Femme' | 'Préfère ne pas dire' | null
           age_fourchette?: '18-25' | '26-35' | '36-45' | '46-55' | '56-65' | '65+' | null
           type_agriculteur?: 'petit_exploitant' | 'moyen_exploitant' | 'grand_exploitant' | 'cooperative' | null
-          type_utilisateur?: 'producteur' | 'acheteur' | 'prestataire_service' | 'agent' | 'cooperative' | 'transformateur' | null
+          type_utilisateur?: (
+            | 'producteur'
+            | 'acheteur'
+            | 'prestataire_service'
+            | 'agent'
+            | 'cooperative'
+            | 'transformateur'
+          )[] | null
           superficie_exploitation?: number | null
           superficie_fourchette?: 'Moins de 1 ha' | '1-3 ha' | '3-10 ha' | '10-50 ha' | 'Plus de 50 ha' | null
           cultures_pratiquees?: string[]
@@ -63,6 +83,9 @@ export interface Database {
           nom_complet?: string
           nom_societe?: string | null
           telephone?: string | null
+          email?: string | null
+          whatsapp?: string | null
+          bio?: string | null
           adresse?: string | null
           langue_preferee?: 'Hausa' | 'Anglais' | 'Français' | null
           etat?: string | null
@@ -72,7 +95,14 @@ export interface Database {
           sexe?: 'Homme' | 'Femme' | 'Préfère ne pas dire' | null
           age_fourchette?: '18-25' | '26-35' | '36-45' | '46-55' | '56-65' | '65+' | null
           type_agriculteur?: 'petit_exploitant' | 'moyen_exploitant' | 'grand_exploitant' | 'cooperative' | null
-          type_utilisateur?: 'producteur' | 'acheteur' | 'prestataire_service' | 'agent' | 'cooperative' | 'transformateur' | null
+          type_utilisateur?: (
+            | 'producteur'
+            | 'acheteur'
+            | 'prestataire_service'
+            | 'agent'
+            | 'cooperative'
+            | 'transformateur'
+          )[] | null
           superficie_exploitation?: number | null
           superficie_fourchette?: 'Moins de 1 ha' | '1-3 ha' | '3-10 ha' | '10-50 ha' | 'Plus de 50 ha' | null
           cultures_pratiquees?: string[]

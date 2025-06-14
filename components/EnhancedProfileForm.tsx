@@ -13,8 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { 
   X, 
-  User, 
-  Phone, 
+  User,
+  Phone,
+  Mail,
   MapPin, 
   Building, 
   Globe, 
@@ -44,11 +45,21 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
     langue_preferee: 'Hausa' as 'Hausa' | 'Anglais' | 'Français',
     etat: '',
     sexe: '' as 'Homme' | 'Femme' | 'Préfère ne pas dire' | '',
-    type_utilisateur: 'producteur' as 'producteur' | 'acheteur' | 'prestataire_service' | 'agent' | 'cooperative' | 'transformateur',
+    type_utilisateur: ['producteur'] as (
+      | 'producteur'
+      | 'acheteur'
+      | 'prestataire_service'
+      | 'agent'
+      | 'cooperative'
+      | 'transformateur'
+    )[],
     
     // Optionnels
     nom_societe: '',
     telephone: '',
+    email: '',
+    whatsapp: '',
+    bio: '',
     lga: '',
     village_quartier: '',
     age_fourchette: '' as '18-25' | '26-35' | '36-45' | '46-55' | '56-65' | '65+' | '',
@@ -78,8 +89,8 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
       if (!formData.etat) {
         errors.etat = 'Veuillez sélectionner votre état';
       }
-      if (!formData.type_utilisateur) {
-        errors.type_utilisateur = 'Veuillez sélectionner votre type d\'utilisateur';
+      if (formData.type_utilisateur.length === 0) {
+        errors.type_utilisateur = "Veuillez sélectionner au moins un type d'utilisateur";
       }
     }
 
@@ -135,6 +146,15 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
     }));
   };
 
+  const toggleUserType = (typeKey: string) => {
+    setFormData(prev => ({
+      ...prev,
+      type_utilisateur: prev.type_utilisateur.includes(typeKey)
+        ? prev.type_utilisateur.filter(t => t !== typeKey)
+        : [...prev.type_utilisateur, typeKey]
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!validateStep(1) || !validateStep(2)) {
       Alert.alert('Erreur', 'Veuillez corriger les erreurs dans le formulaire');
@@ -148,6 +168,9 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
         nom_complet: formData.nom_complet,
         nom_societe: formData.nom_societe === '' ? null : formData.nom_societe,
         telephone: formData.telephone === '' ? null : formData.telephone,
+        email: formData.email === '' ? null : formData.email,
+        whatsapp: formData.whatsapp === '' ? null : formData.whatsapp,
+        bio: formData.bio === '' ? null : formData.bio,
         langue_preferee: formData.langue_preferee,
         etat: formData.etat,
         lga: formData.lga === '' ? null : formData.lga,
@@ -242,6 +265,38 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
                   placeholderTextColor="#9CA3AF"
                   value={formData.telephone}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, telephone: text }))}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Email</Text>
+              <Text style={styles.formSubLabel}>Pour les notifications et la récupération de compte</Text>
+              <View style={styles.inputContainer}>
+                <Mail size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Votre adresse email"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.email}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, email: text }))}
+                  keyboardType="email-address"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>WhatsApp</Text>
+              <Text style={styles.formSubLabel}>Votre numéro WhatsApp sera utilisé pour faciliter les contacts directs sur la marketplace.</Text>
+              <View style={styles.inputContainer}>
+                <Phone size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Numéro WhatsApp"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.whatsapp}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, whatsapp: text }))}
                   keyboardType="phone-pad"
                 />
               </View>
@@ -412,15 +467,17 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
                     key={type.key}
                     style={[
                       styles.optionButton,
-                      formData.type_utilisateur === type.key && styles.optionButtonSelected
+                      formData.type_utilisateur.includes(type.key) && styles.optionButtonSelected
                     ]}
-                    onPress={() => setFormData(prev => ({ ...prev, type_utilisateur: type.key as any }))}
+                    onPress={() => toggleUserType(type.key)}
                   >
-                    <Users size={16} color={formData.type_utilisateur === type.key ? "#FFFFFF" : "#6B7280"} />
-                    <Text style={[
-                      styles.optionText,
-                      formData.type_utilisateur === type.key && styles.optionTextSelected
-                    ]}>
+                    <Users size={16} color={formData.type_utilisateur.includes(type.key) ? "#FFFFFF" : "#6B7280"} />
+                    <Text
+                      style={[
+                        styles.optionText,
+                        formData.type_utilisateur.includes(type.key) && styles.optionTextSelected,
+                      ]}
+                    >
                       {type.label}
                     </Text>
                   </TouchableOpacity>
@@ -488,6 +545,19 @@ export default function EnhancedProfileForm({ visible, onClose, onSuccess }: Enh
                   </View>
                 </View>
               ))}
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Bio</Text>
+              <Text style={styles.formSubLabel}>Courte description de votre profil ou de votre activité</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                placeholder="Quelques mots sur vous"
+                placeholderTextColor="#9CA3AF"
+                value={formData.bio}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, bio: text }))}
+                multiline
+              />
             </View>
           </View>
         )}
@@ -612,6 +682,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     marginLeft: 12,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   textInputError: {
     borderColor: '#DC2626',
