@@ -3,12 +3,21 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { Plus, Search, Filter, MapPin, Star, ShoppingCart, Leaf, Apple, Wheat, CreditCard as Edit3, Trash2, Eye, User, Camera, X, Navigation, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, Package, TrendingUp, Zap } from 'lucide-react-native';
+// Les icônes nécessaires pour la marketplace
+import { Plus, Search, Filter, MapPin, ShoppingCart, Leaf, CreditCard as Edit3, Trash2, User, Camera, X, Navigation, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, Package, TrendingUp, Zap } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnnonces } from '@/hooks/useAnnonces';
 import { useCategories } from '@/hooks/useCategories';
 import AuthModal from '@/components/AuthModal';
 import EnhancedProfileForm from '@/components/EnhancedProfileForm';
+// Nouveaux composants extraits pour améliorer la lisibilité de la page
+import ProductCard from '@/components/marketplace/ProductCard';
+import CategorySelector from '@/components/marketplace/CategorySelector';
+import ProductForm from '@/components/marketplace/ProductForm';
+import SortModal from '@/components/marketplace/SortModal';
+import FiltersModal from '@/components/marketplace/FiltersModal';
+import AuthPrompt from '@/components/marketplace/AuthPrompt';
+import EmptyState from '@/components/marketplace/EmptyState';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -41,6 +50,7 @@ export default function MarketplaceScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSellForm, setShowSellForm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showEnhancedProfileForm, setShowEnhancedProfileForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showSortModal, setShowSortModal] = useState(false);
@@ -160,7 +170,7 @@ export default function MarketplaceScreen() {
 
   const handleSellButtonPress = () => {
     if (!user) {
-      setShowAuthModal(true);
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -184,7 +194,7 @@ export default function MarketplaceScreen() {
 
   const handleSubmit = async () => {
     if (!user) {
-      setShowAuthModal(true);
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -291,7 +301,7 @@ export default function MarketplaceScreen() {
 
   const handleBuyNow = (annonce: any) => {
     if (!user) {
-      setShowAuthModal(true);
+      setShowAuthPrompt(true);
       return;
     }
 
@@ -428,177 +438,20 @@ export default function MarketplaceScreen() {
   if (showSellForm) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.formHeader}>
-          <TouchableOpacity onPress={() => {
-            resetForm();
-            setShowSellForm(false);
-          }}>
-            <Text style={styles.cancelButton}>Annuler</Text>
-          </TouchableOpacity>
-          <Text style={styles.formTitle}>
-            {editingAnnonce ? 'Modifier l\'annonce' : 'Vendre un Produit'}
-          </Text>
-          <TouchableOpacity onPress={handleSubmit}>
-            <Text style={styles.saveButton}>
-              {editingAnnonce ? 'Modifier' : 'Publier'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.formContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Photos du produit *</Text>
-            <Text style={styles.formSubLabel}>Ajoutez jusqu'à 5 photos (recommandé: 3-5 photos)</Text>
-            
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageContainer}>
-              {formData.images.map((uri, index) => (
-                <View key={index} style={styles.imageWrapper}>
-                  <Image source={{ uri }} style={styles.previewImage} />
-                  <TouchableOpacity 
-                    style={styles.removeImageButton}
-                    onPress={() => removeImage(index)}
-                  >
-                    <X size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              
-              {formData.images.length < 5 && (
-                <TouchableOpacity 
-                  style={styles.addImageButton} 
-                  onPress={pickImage}
-                  disabled={uploadingImage}
-                >
-                  {uploadingImage ? (
-                    <ActivityIndicator color="#6B7280" />
-                  ) : (
-                    <>
-                      <Camera size={24} color="#6B7280" />
-                      <Text style={styles.addImageText}>Ajouter</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-            
-            {formErrors.images && <Text style={styles.errorText}>{formErrors.images}</Text>}
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Nom du produit *</Text>
-            <TextInput
-              style={[styles.textInput, formErrors.titre && styles.textInputError]}
-              placeholder="Ex: Tomates fraîches"
-              placeholderTextColor="#9CA3AF"
-              value={formData.titre}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, titre: text }))}
-            />
-            {formErrors.titre && <Text style={styles.errorText}>{formErrors.titre}</Text>}
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Catégorie *</Text>
-            <View style={styles.categoryGrid}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryOption,
-                    formData.categorie_id === category.id && styles.categoryOptionSelected
-                  ]}
-                  onPress={() => setFormData(prev => ({ ...prev, categorie_id: category.id }))}
-                >
-                  <Text style={[
-                    styles.categoryOptionText,
-                    formData.categorie_id === category.id && styles.categoryOptionTextSelected
-                  ]}>
-                    {category.nom}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {formErrors.categorie_id && <Text style={styles.errorText}>{formErrors.categorie_id}</Text>}
-          </View>
-
-          <View style={styles.formRow}>
-            <View style={[styles.formSection, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.formLabel}>Prix *</Text>
-              <TextInput
-                style={[styles.textInput, formErrors.prix && styles.textInputError]}
-                placeholder="500"
-                placeholderTextColor="#9CA3AF"
-                value={formData.prix}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, prix: text }))}
-                keyboardType="numeric"
-              />
-              {formErrors.prix && <Text style={styles.errorText}>{formErrors.prix}</Text>}
-            </View>
-            <View style={[styles.formSection, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.formLabel}>Unité *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="₦/kg"
-                placeholderTextColor="#9CA3AF"
-                value={formData.unite_prix}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, unite_prix: text }))}
-              />
-            </View>
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Quantité disponible *</Text>
-            <TextInput
-              style={[styles.textInput, formErrors.quantite_disponible && styles.textInputError]}
-              placeholder="50 kg"
-              placeholderTextColor="#9CA3AF"
-              value={formData.quantite_disponible}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, quantite_disponible: text }))}
-            />
-            {formErrors.quantite_disponible && <Text style={styles.errorText}>{formErrors.quantite_disponible}</Text>}
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Description</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              placeholder="Décrivez votre produit..."
-              placeholderTextColor="#9CA3AF"
-              value={formData.description}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Localisation</Text>
-            <View style={styles.locationInputContainer}>
-              <TextInput
-                style={styles.textInput}
-                placeholder={profile?.etat ? `${profile.etat}, Nigeria` : "Ex: Kano, Nigeria"}
-                placeholderTextColor="#9CA3AF"
-                value={formData.localisation}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, localisation: text }))}
-              />
-              <TouchableOpacity 
-                style={styles.locationButton}
-                onPress={() => {
-                  if (profile?.etat) {
-                    setFormData(prev => ({ ...prev, localisation: `${profile.etat}, Nigeria` }));
-                  }
-                }}
-              >
-                <Navigation size={16} color="#16A34A" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.publishButton} onPress={handleSubmit}>
-            <Text style={styles.publishButtonText}>
-              {editingAnnonce ? 'Modifier l\'annonce' : 'Publier mon annonce'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <ProductForm
+          formData={formData}
+          setFormData={setFormData}
+          formErrors={formErrors}
+          categories={categories}
+          profile={profile}
+          editingAnnonce={editingAnnonce}
+          pickImage={pickImage}
+          removeImage={removeImage}
+          uploadingImage={uploadingImage}
+          handleSubmit={handleSubmit}
+          resetForm={resetForm}
+          onCancel={() => setShowSellForm(false)}
+        />
       </SafeAreaView>
     );
   }
@@ -614,13 +467,15 @@ export default function MarketplaceScreen() {
           >
             <TrendingUp size={18} color="#16A34A" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.sellButton}
-            onPress={handleSellButtonPress}
-          >
-            <Plus size={20} color="#FFFFFF" />
-            <Text style={styles.sellButtonText}>Vendre</Text>
-          </TouchableOpacity>
+          {user && (
+            <TouchableOpacity
+              style={styles.sellButton}
+              onPress={handleSellButtonPress}
+            >
+              <Plus size={20} color="#FFFFFF" />
+              <Text style={styles.sellButtonText}>Vendre</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -651,29 +506,11 @@ export default function MarketplaceScreen() {
         </Text>
       </View>
 
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-      >
-        {categoriesWithAll.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryCard,
-              selectedCategory === category.id && styles.categoryCardActive
-            ]}
-            onPress={() => setSelectedCategory(category.id)}
-          >
-            <Text style={[
-              styles.categoryText,
-              selectedCategory === category.id && styles.categoryTextActive
-            ]}>
-              {category.nom}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <CategorySelector
+        categories={categoriesWithAll}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
 
       {error && (
         <View style={styles.errorContainer}>
@@ -706,9 +543,9 @@ export default function MarketplaceScreen() {
             <Text style={styles.authPromptText}>
               Créez un compte pour publier vos annonces et gérer vos ventes
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.authPromptButton}
-              onPress={() => setShowAuthModal(true)}
+              onPress={() => setShowAuthPrompt(true)}
             >
               <Text style={styles.authPromptButtonText}>Se connecter</Text>
             </TouchableOpacity>
@@ -728,88 +565,18 @@ export default function MarketplaceScreen() {
 
             {filteredAnnonces.map((annonce) => {
               const distanceText = getDistanceText(annonce);
-              
               return (
-                <View key={annonce.id} style={styles.productCard}>
-                  {annonce.images && annonce.images.length > 0 ? (
-                    <Image source={{ uri: annonce.images[0] }} style={styles.productImage} />
-                  ) : (
-                    <View style={styles.productImagePlaceholder}>
-                      <Leaf size={32} color="#6B7280" />
-                    </View>
-                  )}
-                  
-                  <View style={styles.productInfo}>
-                    <View style={styles.productHeader}>
-                      <Text style={styles.productName}>{annonce.titre}</Text>
-                      <TouchableOpacity 
-                        style={styles.reportButton}
-                        onPress={() => handleReport(annonce.id)}
-                      >
-                        <AlertTriangle size={16} color="#6B7280" />
-                      </TouchableOpacity>
-                    </View>
-                    
-                    <Text style={styles.productPrice}>{annonce.prix} {annonce.unite_prix}</Text>
-                    
-                    <View style={styles.sellerInfo}>
-                      <Text style={styles.sellerName}>
-                        {annonce.profiles?.nom_complet || 'Vendeur anonyme'}
-                      </Text>
-                      <View style={styles.ratingContainer}>
-                        <Star size={12} color="#F59E0B" fill="#F59E0B" />
-                        <Text style={styles.rating}>4.8</Text>
-                      </View>
-                    </View>
-                    
-                    {annonce.localisation && (
-                      <View style={styles.locationContainer}>
-                        <MapPin size={12} color="#6B7280" />
-                        <Text style={styles.location}>{annonce.localisation}</Text>
-                        {distanceText && (
-                          <Text style={styles.distance}> • {distanceText}</Text>
-                        )}
-                      </View>
-                    )}
-                    
-                    <Text style={styles.stock}>{annonce.quantite_disponible} disponibles</Text>
-
-                    {user?.id === annonce.vendeur_id ? (
-                      <View style={styles.ownerActions}>
-                        <TouchableOpacity 
-                          style={styles.editButton}
-                          onPress={() => handleEdit(annonce)}
-                        >
-                          <Edit3 size={16} color="#3B82F6" />
-                          <Text style={styles.editButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.deleteButton}
-                          onPress={() => handleDelete(annonce.id)}
-                        >
-                          <Trash2 size={16} color="#DC2626" />
-                          <Text style={styles.deleteButtonText}>Supprimer</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={styles.buyerActions}>
-                        <TouchableOpacity 
-                          style={styles.contactButton}
-                          onPress={() => Alert.alert('Contact', 'Fonctionnalité de contact bientôt disponible')}
-                        >
-                          <Text style={styles.contactButtonText}>Contacter</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={styles.buyButton}
-                          onPress={() => handleBuyNow(annonce)}
-                        >
-                          <ShoppingCart size={16} color="#FFFFFF" />
-                          <Text style={styles.buyButtonText}>Acheter</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                </View>
+                <ProductCard
+                  key={annonce.id}
+                  annonce={annonce}
+                  user={user}
+                  distanceText={distanceText}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onBuy={handleBuyNow}
+                  onReport={handleReport}
+                  onRequireAuth={() => setShowAuthPrompt(true)}
+                />
               );
             })}
 
@@ -845,132 +612,36 @@ export default function MarketplaceScreen() {
         )}
       </ScrollView>
 
-      {/* Sort Modal */}
-      <Modal
+      <SortModal
         visible={showSortModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowSortModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.sortModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Trier par</Text>
-              <TouchableOpacity onPress={() => setShowSortModal(false)}>
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            {sortOptions.map((option) => {
-              const IconComponent = option.icon;
-              return (
-                <TouchableOpacity
-                  key={option.key}
-                  style={[
-                    styles.sortOption,
-                    sortBy === option.key && styles.sortOptionSelected
-                  ]}
-                  onPress={() => {
-                    setSortBy(option.key);
-                    setShowSortModal(false);
-                  }}
-                >
-                  <IconComponent size={20} color={sortBy === option.key ? "#16A34A" : "#6B7280"} />
-                  <Text style={[
-                    styles.sortOptionText,
-                    sortBy === option.key && styles.sortOptionTextSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                  {sortBy === option.key && (
-                    <CheckCircle size={20} color="#16A34A" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowSortModal(false)}
+        options={sortOptions}
+        selected={sortBy}
+        onSelect={setSortBy}
+      />
 
-      {/* Filters Modal */}
-      <Modal
+      <FiltersModal
         visible={showFilters}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowFilters(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.filtersModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtres</Text>
-              <TouchableOpacity onPress={() => setShowFilters(false)}>
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.filtersContent}>
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Localisation</Text>
-                <TextInput
-                  style={styles.filterInput}
-                  placeholder="État (ex: Kano)"
-                  value={locationFilter.etat || ''}
-                  onChangeText={(text) => setLocationFilter(prev => ({ ...prev, etat: text }))}
-                />
-                <TextInput
-                  style={styles.filterInput}
-                  placeholder="LGA"
-                  value={locationFilter.lga || ''}
-                  onChangeText={(text) => setLocationFilter(prev => ({ ...prev, lga: text }))}
-                />
-              </View>
+        onClose={() => setShowFilters(false)}
+        locationFilter={locationFilter}
+        setLocationFilter={setLocationFilter}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+      />
 
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Fourchette de prix (₦)</Text>
-                <View style={styles.priceRangeContainer}>
-                  <TextInput
-                    style={[styles.filterInput, { flex: 1, marginRight: 8 }]}
-                    placeholder="Min"
-                    value={priceRange.min}
-                    onChangeText={(text) => setPriceRange(prev => ({ ...prev, min: text }))}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.filterInput, { flex: 1, marginLeft: 8 }]}
-                    placeholder="Max"
-                    value={priceRange.max}
-                    onChangeText={(text) => setPriceRange(prev => ({ ...prev, max: text }))}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.filtersActions}>
-              <TouchableOpacity 
-                style={styles.clearFiltersButton}
-                onPress={() => {
-                  setLocationFilter({});
-                  setPriceRange({ min: '', max: '' });
-                }}
-              >
-                <Text style={styles.clearFiltersText}>Effacer</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.applyFiltersButton}
-                onPress={() => setShowFilters(false)}
-              >
-                <Text style={styles.applyFiltersText}>Appliquer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <AuthModal 
+      <AuthModal
         visible={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         initialMode="signup"
+      />
+
+      <AuthPrompt
+        visible={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+        onLogin={() => {
+          setShowAuthPrompt(false);
+          setShowAuthModal(true);
+        }}
       />
 
       <EnhancedProfileForm
@@ -1244,16 +915,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 14,
     color: '#374151',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rating: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: '#F59E0B',
-    marginLeft: 2,
   },
   locationContainer: {
     flexDirection: 'row',
