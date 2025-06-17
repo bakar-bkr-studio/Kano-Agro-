@@ -8,7 +8,6 @@ import FavoritesModal, { FavoriteItem } from '@/components/FavoritesModal';
 import AuthPrompt from '@/components/marketplace/AuthPrompt';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
-import { useDashboardStats } from '@/hooks/useDashboardStats';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -19,6 +18,66 @@ const mockNotifications = [
   { id: 3, title: 'Nouveau produit près de vous', message: 'Tomates fraîches à 2km', type: 'marketplace', unread: false, timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
 ];
 
+// Dynamic tips based on weather/season/time
+const getDynamicTip = () => {
+  const month = new Date().getMonth();
+  const hour = new Date().getHours();
+  const day = new Date().getDay();
+  
+  const tips = {
+    morning: {
+      title: 'Conseil du matin',
+      text: 'C\'est le moment idéal pour l\'arrosage. Les plantes absorbent mieux l\'eau avant la chaleur.',
+      image: 'https://images.pexels.com/photos/1459375/pexels-photo-1459375.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Sun'
+    },
+    afternoon: {
+      title: 'Conseil de l\'après-midi',
+      text: 'Évitez l\'arrosage en plein soleil. Préférez inspecter vos cultures pour détecter les maladies.',
+      image: 'https://images.pexels.com/photos/1327838/pexels-photo-1327838.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Shield'
+    },
+    evening: {
+      title: 'Conseil du soir',
+      text: 'Planifiez vos activités de demain et vérifiez la météo pour optimiser vos travaux agricoles.',
+      image: 'https://images.pexels.com/photos/574919/pexels-photo-574919.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Calendar'
+    },
+    rainy_season: {
+      title: 'Saison des pluies',
+      text: 'Surveillez vos cultures contre les maladies fongiques et assurez-vous du bon drainage.',
+      image: 'https://images.pexels.com/photos/1459374/pexels-photo-1459374.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Shield'
+    },
+    dry_season: {
+      title: 'Saison sèche',
+      text: 'Optimisez votre irrigation et protégez vos cultures contre la chaleur excessive.',
+      image: 'https://images.pexels.com/photos/2518861/pexels-photo-2518861.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Zap'
+    },
+    weekend: {
+      title: 'Conseil du weekend',
+      text: 'Profitez du weekend pour planifier vos semis de la semaine prochaine et entretenir vos outils.',
+      image: 'https://images.pexels.com/photos/1459374/pexels-photo-1459374.jpeg?auto=compress&cs=tinysrgb&w=400',
+      icon: 'Calendar'
+    }
+  };
+
+  // Determine tip based on time and season
+  if (day === 0 || day === 6) { // Weekend
+    return tips.weekend;
+  } else if (month >= 4 && month <= 9) { // Rainy season
+    return tips.rainy_season;
+  } else if (month >= 10 || month <= 3) { // Dry season
+    return tips.dry_season;
+  } else if (hour >= 6 && hour < 12) {
+    return tips.morning;
+  } else if (hour >= 12 && hour < 18) {
+    return tips.afternoon;
+  } else {
+    return tips.evening;
+  }
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -28,11 +87,11 @@ export default function HomeScreen() {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [currentTip, setCurrentTip] = useState(getDynamicTip());
   const [weatherInfo] = useState({ temp: 28, icon: '☀️' });
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const { stats: dashboardStats } = useDashboardStats();
 
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -45,7 +104,13 @@ export default function HomeScreen() {
   const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
   
   // Animation values
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const cardAnimations = useRef([
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1)
+  ]).current;
 
   useEffect(() => {
     // Fade in animation on mount
@@ -55,6 +120,12 @@ export default function HomeScreen() {
       useNativeDriver: true,
     }).start();
 
+    // Update tip every hour
+    const interval = setInterval(() => {
+      setCurrentTip(getDynamicTip());
+    }, 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleProfilePress = () => {
@@ -103,6 +174,23 @@ export default function HomeScreen() {
     if (offset <= 50 && headerCollapsed) setHeaderCollapsed(false);
   };
 
+  const animatePress = (callback: () => void, index?: number) => {
+    const animation = index !== undefined ? cardAnimations[index] : scaleAnim;
+    
+    Animated.sequence([
+      Animated.timing(animation, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animation, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    callback();
+  };
 
   const markNotificationAsRead = (id: number) => {
     setNotifications(prev => 
@@ -135,6 +223,20 @@ export default function HomeScreen() {
   const unreadCount = notifications.filter(n => n.unread).length;
   const hasNotifications = notifications.length > 0;
 
+  // Service stats (mock data - in real app, fetch from API)
+  const serviceStats = {
+    weather: { count: 3, label: 'alertes actives', color: '#DBEAFE' },
+    diagnosis: { count: 12, label: 'diagnostics', color: '#DCFCE7' },
+    marketplace: { count: 45, label: 'produits', color: '#FEF3C7' },
+    equipment: { count: 8, label: 'équipements', color: '#F3E8FF' },
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const icons: Record<string, any> = {
+      Sun, Shield, Calendar, Zap
+    };
+    return icons[iconName] || Zap;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -225,7 +327,6 @@ export default function HomeScreen() {
           )}
           </AnimatedLinearGradient>
 
-
         <Animated.ScrollView
           style={styles.content}
           showsVerticalScrollIndicator={false}
@@ -235,53 +336,276 @@ export default function HomeScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <View style={styles.summarySection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.summaryCardsContainer}
-            >
-              <View style={[styles.summaryCard, styles.cardGreen]}>
-                <Text style={styles.summaryIcon}>🧺</Text>
-                <Text style={styles.summaryTitle}>Produits en stock</Text>
-                <Text style={styles.summaryValue}>{dashboardStats.stock_count}</Text>
-              </View>
-              <View style={[styles.summaryCard, styles.cardBlue]}>
-                <Text style={styles.summaryIcon}>📦</Text>
-                <Text style={styles.summaryTitle}>Annonces actives</Text>
-                <Text style={styles.summaryValue}>{dashboardStats.annonces_actives}</Text>
-              </View>
-              <View style={[styles.summaryCard, styles.cardOrange]}>
-                <Text style={styles.summaryIcon}>🛒</Text>
-                <Text style={styles.summaryTitle}>Ventes réalisées</Text>
-                <Text style={styles.summaryValue}>{dashboardStats.ventes_realisees}</Text>
-              </View>
-            </ScrollView>
+          {/* Enhanced Stats Cards */}
+          <View style={styles.statsContainer}>
+            <Animated.View style={[styles.statCard, styles.statCardPrimary, { transform: [{ scale: cardAnimations[0] }] }]}>
+              <TouchableOpacity 
+                style={styles.statCardContent}
+                onPress={() => animatePress(() => {}, 0)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.statIconContainer}>
+                  <Leaf size={32} color="#FFFFFF" />
+                </View>
+                <Text style={styles.statNumber}>
+                  {profile?.superficie_exploitation || '2.5'} ha
+                </Text>
+                <Text style={styles.statLabel}>Superficie</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            
+            <Animated.View style={[styles.statCard, styles.statCardSecondary, { transform: [{ scale: cardAnimations[1] }] }]}>
+              <TouchableOpacity 
+                style={styles.statCardContent}
+                onPress={() => animatePress(() => router.push('/(tabs)/weather'), 1)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.statIconContainer}>
+                  <Sun size={32} color="#FFFFFF" />
+                </View>
+                <Text style={styles.statNumber}>28°C</Text>
+                <Text style={styles.statLabel}>Température</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            
+            <Animated.View style={[styles.statCard, styles.statCardTertiary, { transform: [{ scale: cardAnimations[2] }] }]}>
+              <TouchableOpacity 
+                style={styles.statCardContent}
+                onPress={() => animatePress(() => router.push('/(tabs)/marketplace'), 2)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.statIconContainer}>
+                  <Store size={32} color="#FFFFFF" />
+                </View>
+                <Text style={styles.statNumber}>5</Text>
+                <Text style={styles.statLabel}>Produits</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
-          <View style={styles.ctaSection}>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaProducts]}
-              onPress={() => router.push('/(tabs)/equipment')}
-            >
-              <Package size={24} color="#16A34A" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Voir les produits disponibles</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaGestion]}
-              onPress={() => router.push('/(tabs)/gestion')}
-            >
-              <Store size={24} color="#1D4ED8" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Accéder à la gestion</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaDiagnosis]}
-              onPress={() => router.push('/(tabs)/diagnosis')}
-            >
-              <Activity size={24} color="#F97316" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Lancer un diagnostic IA</Text>
-            </TouchableOpacity>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Services Principaux</Text>
+            <View style={styles.servicesGrid}>
+              <TouchableOpacity 
+                style={[styles.serviceCard, styles.serviceCardWeather]}
+                onPress={() => animatePress(() => router.push('/(tabs)/weather'))}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.serviceIcon, { backgroundColor: serviceStats.weather.color }]}>
+                  <Sun size={40} color="#3B82F6" />
+                </View>
+                <Text style={styles.serviceTitle}>Météo</Text>
+                <Text style={styles.serviceDesc}>Alertes personnalisées</Text>
+                <View style={styles.serviceInfoContainer}>
+                  <Text style={styles.serviceInfo}>{serviceStats.weather.count} {serviceStats.weather.label}</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.serviceCard, styles.serviceCardDiagnosis]}
+                onPress={() => animatePress(() => router.push('/(tabs)/diagnosis'))}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.serviceIcon, { backgroundColor: serviceStats.diagnosis.color }]}>
+                  <Camera size={40} color="#16A34A" />
+                </View>
+                <Text style={styles.serviceTitle}>Diagnostic</Text>
+                <Text style={styles.serviceDesc}>IA pour cultures</Text>
+                <View style={styles.serviceInfoContainer}>
+                  <Text style={styles.serviceInfo}>{serviceStats.diagnosis.count} {serviceStats.diagnosis.label}</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.serviceCard, styles.serviceCardMarket]}
+                onPress={() => animatePress(() => router.push('/(tabs)/marketplace'))}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.serviceIcon, { backgroundColor: serviceStats.marketplace.color }]}>
+                  <Store size={40} color="#F59E0B" />
+                </View>
+                <Text style={styles.serviceTitle}>Marché</Text>
+                <Text style={styles.serviceDesc}>Vendre vos produits</Text>
+                <View style={styles.serviceInfoContainer}>
+                  <Text style={styles.serviceInfo}>{serviceStats.marketplace.count} {serviceStats.marketplace.label}</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.serviceCard, styles.serviceCardEquipment]}
+                onPress={() => animatePress(() => router.push('/(tabs)/equipment'))}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.serviceIcon, { backgroundColor: serviceStats.equipment.color }]}>
+                  <Truck size={40} color="#8B5CF6" />
+                </View>
+                <Text style={styles.serviceTitle}>Matériel</Text>
+                <Text style={styles.serviceDesc}>Location équipement</Text>
+                <View style={styles.serviceInfoContainer}>
+                  <Text style={styles.serviceInfo}>{serviceStats.equipment.count} {serviceStats.equipment.label}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
+
+          <TouchableOpacity 
+            style={styles.sosButton}
+            onPress={() => animatePress(() => router.push('/(tabs)/sos'))}
+            activeOpacity={0.8}
+          >
+            <Phone size={24} color="#FFFFFF" />
+            <Text style={styles.sosText}>Urgence - SOS</Text>
+            <View style={styles.sosIndicator}>
+              <Activity size={16} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+
+          {/* Dynamic Tip Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Conseil du Moment</Text>
+            <View style={styles.tipCard}>
+              <Image 
+                source={{ uri: currentTip.image }}
+                style={styles.tipImage}
+              />
+              <View style={styles.tipContent}>
+                <View style={styles.tipHeader}>
+                  <Text style={styles.tipTitle}>{currentTip.title}</Text>
+                  {React.createElement(getIconComponent(currentTip.icon), { size: 20, color: '#F59E0B' })}
+                </View>
+                <Text style={styles.tipText}>{currentTip.text}</Text>
+                <View style={styles.tipFooter}>
+                  <Calendar size={14} color="#6B7280" />
+                  <Text style={styles.tipTime}>
+                    {new Date().toLocaleDateString('fr-FR', { 
+                      weekday: 'long', 
+                      day: 'numeric', 
+                      month: 'long' 
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Enhanced Profile Section */}
+          {profile && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Mon Profil</Text>
+              <TouchableOpacity style={styles.profileCard} onPress={handleProfilePress}>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>{profile.nom_complet}</Text>
+                  <Text style={styles.profileType}>
+                    {Array.isArray(profile.type_utilisateur) && profile.type_utilisateur.length > 0
+                      ? profile.type_utilisateur
+                          .map((t) =>
+                            t === 'producteur'
+                              ? 'Producteur'
+                              : t === 'acheteur'
+                              ? 'Acheteur'
+                              : t === 'prestataire_service'
+                              ? 'Prestataire'
+                              : t === 'agent'
+                              ? 'Agent agricole'
+                              : t === 'cooperative'
+                              ? 'Coopérative'
+                              : t === 'transformateur'
+                              ? 'Transformateur'
+                              : t
+                          )
+                          .join(', ')
+                      : 'Producteur'}
+                  </Text>
+                  {profile.cultures_pratiquees && profile.cultures_pratiquees.length > 0 && (
+                    <Text style={styles.profileCultures}>
+                      Cultures: {profile.cultures_pratiquees.slice(0, 3).join(', ')}
+                      {profile.cultures_pratiquees.length > 3 && '...'}
+                    </Text>
+                  )}
+                  <TouchableOpacity style={styles.editProfileButton} onPress={handleProfilePress}>
+                    <Edit3 size={14} color="#16A34A" />
+                    <Text style={styles.editProfileText}>Éditer mon profil</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.profileArrow}>
+                  <Text style={styles.profileArrowText}>→</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Enhanced Non-Connected User Section */}
+          {!user && (
+            <View style={styles.section}>
+              <View style={styles.nonConnectedCard}>
+                <User size={48} color="#6B7280" />
+                <Text style={styles.nonConnectedTitle}>Rejoignez la communauté</Text>
+                <Text style={styles.nonConnectedText}>
+                  Connectez-vous pour accéder à toutes les fonctionnalités
+                </Text>
+                
+                {/* Benefits */}
+                <View style={styles.benefitsContainer}>
+                  <View style={styles.benefitItem}>
+                    <TrendingUp size={20} color="#16A34A" />
+                    <Text style={styles.benefitText}>Historique et statistiques</Text>
+                  </View>
+                  <View style={styles.benefitItem}>
+                    <Bell size={20} color="#16A34A" />
+                    <Text style={styles.benefitText}>Alertes personnalisées</Text>
+                  </View>
+                  <View style={styles.benefitItem}>
+                    <Users size={20} color="#16A34A" />
+                    <Text style={styles.benefitText}>Services communautaires</Text>
+                  </View>
+                </View>
+
+                <View style={styles.nonConnectedButtons}>
+                  <TouchableOpacity style={styles.connectButton} onPress={handleSignInPress}>
+                    <LogIn size={16} color="#FFFFFF" />
+                    <Text style={styles.connectButtonText}>Se connecter</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.createAccountButton} onPress={handleSignUpPress}>
+                    <UserPlus size={16} color="#16A34A" />
+                    <Text style={styles.createAccountButtonText}>Créer un compte</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Quick Stats for authenticated users */}
+          {user && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Activité Récente</Text>
+              <View style={styles.quickStatsGrid}>
+                <View style={styles.quickStatCard}>
+                  <Package size={24} color="#3B82F6" />
+                  <Text style={styles.quickStatNumber}>3</Text>
+                  <Text style={styles.quickStatLabel}>Annonces</Text>
+                </View>
+                <View style={styles.quickStatCard}>
+                  <Camera size={24} color="#16A34A" />
+                  <Text style={styles.quickStatNumber}>12</Text>
+                  <Text style={styles.quickStatLabel}>Diagnostics</Text>
+                </View>
+                <View style={styles.quickStatCard}>
+                  <Shield size={24} color="#F59E0B" />
+                  <Text style={styles.quickStatNumber}>2</Text>
+                  <Text style={styles.quickStatLabel}>Alertes</Text>
+                </View>
+                <View style={styles.quickStatCard}>
+                  <Sprout size={24} color="#8B5CF6" />
+                  <Text style={styles.quickStatNumber}>
+                    {profile?.cultures_pratiquees?.length || 0}
+                  </Text>
+                  <Text style={styles.quickStatLabel}>Cultures</Text>
+                </View>
+              </View>
+            </View>
+          )}
         </Animated.ScrollView>
+
         {/* Notifications Modal */}
         <Modal
           visible={showNotifications}
@@ -919,72 +1243,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
-  summarySection: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  summaryCardsContainer: {
-    paddingHorizontal: 20,
-  },
-  summaryCard: {
-    width: 180,
-    marginRight: 16,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignItems: 'center',
-  },
-  summaryIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  summaryTitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    color: '#374151',
-  },
-  summaryValue: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 20,
-    color: '#111827',
-    marginTop: 4,
-  },
-  cardGreen: { backgroundColor: '#DCFCE7' },
-  cardBlue: { backgroundColor: '#DBEAFE' },
-  cardOrange: { backgroundColor: '#FEF3C7' },
-  ctaSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  ctaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  ctaIcon: {
-    marginRight: 8,
-  },
-  ctaText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#111827',
-  },
-  ctaProducts: { backgroundColor: '#ECFDF5' },
-  ctaGestion: { backgroundColor: '#EEF2FF' },
-  ctaDiagnosis: { backgroundColor: '#FFFBEB' },
   // Modal styles
   modalOverlay: {
     flex: 1,
