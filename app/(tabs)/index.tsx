@@ -236,11 +236,8 @@ export default function HomeScreen() {
           scrollEventThrottle={16}
         >
           <View style={styles.summarySection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.summaryCardsContainer}
-            >
+            <Text style={styles.blockTitle}>Statistiques d’activité</Text>
+            <View style={styles.statsGrid}>
               <View style={[styles.summaryCard, styles.cardGreen]}>
                 <Text style={styles.summaryIcon}>🧺</Text>
                 <Text style={styles.summaryTitle}>Produits en stock</Text>
@@ -256,30 +253,37 @@ export default function HomeScreen() {
                 <Text style={styles.summaryTitle}>Ventes réalisées</Text>
                 <Text style={styles.summaryValue}>{dashboardStats.ventes_realisees}</Text>
               </View>
-            </ScrollView>
+            </View>
           </View>
+
           <View style={styles.ctaSection}>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaProducts]}
-              onPress={() => router.push('/(tabs)/equipment')}
-            >
-              <Package size={24} color="#16A34A" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Voir les produits disponibles</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaGestion]}
-              onPress={() => router.push('/(tabs)/gestion')}
-            >
-              <Store size={24} color="#1D4ED8" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Accéder à la gestion</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ctaCard, styles.ctaDiagnosis]}
-              onPress={() => router.push('/(tabs)/diagnosis')}
-            >
-              <Activity size={24} color="#F97316" style={styles.ctaIcon} />
-              <Text style={styles.ctaText}>Lancer un diagnostic IA</Text>
-            </TouchableOpacity>
+            <Text style={styles.blockTitle}>Actions rapides</Text>
+            <View style={styles.ctaGrid}>
+              <TouchableOpacity
+                style={[styles.ctaCard, styles.ctaProducts]}
+                onPress={() => router.push('/(tabs)/equipment')}
+              >
+                <Package size={28} color="#16A34A" style={styles.ctaIcon} />
+                <Text style={styles.ctaTitle}>Voir les produits disponibles</Text>
+                <Text style={styles.ctaDesc}>Accédez à vos équipements</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ctaCard, styles.ctaGestion]}
+                onPress={() => router.push('/(tabs)/gestion')}
+              >
+                <Store size={28} color="#1D4ED8" style={styles.ctaIcon} />
+                <Text style={styles.ctaTitle}>Accéder à la gestion</Text>
+                <Text style={styles.ctaDesc}>Outils et suivi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ctaCard, styles.ctaDiagnosis]}
+                onPress={() => router.push('/(tabs)/diagnosis')}
+              >
+                <Activity size={28} color="#F97316" style={styles.ctaIcon} />
+                <Text style={styles.ctaTitle}>Lancer un diagnostic IA</Text>
+                <Text style={styles.ctaDesc}>Analyse rapide de vos cultures</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.ScrollView>
         {/* Notifications Modal */}
@@ -923,12 +927,22 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
   },
-  summaryCardsContainer: {
+  blockTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: '#111827',
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
     paddingHorizontal: 20,
   },
   summaryCard: {
-    width: 180,
-    marginRight: 16,
+    width: (screenWidth - 80) / 3,
     padding: 16,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
@@ -954,19 +968,25 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginTop: 4,
   },
-  cardGreen: { backgroundColor: '#DCFCE7' },
-  cardBlue: { backgroundColor: '#DBEAFE' },
-  cardOrange: { backgroundColor: '#FEF3C7' },
+  cardGreen: { backgroundColor: '#ECFDF5' },
+  cardBlue: { backgroundColor: '#EFF6FF' },
+  cardOrange: { backgroundColor: '#FEF9C3' },
   ctaSection: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  ctaCard: {
+  ctaGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  ctaCard: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
+    padding: 20,
     borderRadius: 16,
+    width: (screenWidth - 80) / 3,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -975,12 +995,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   ctaIcon: {
-    marginRight: 8,
+    marginBottom: 8,
   },
-  ctaText: {
+  ctaTitle: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
+    fontSize: 14,
     color: '#111827',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  ctaDesc: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   ctaProducts: { backgroundColor: '#ECFDF5' },
   ctaGestion: { backgroundColor: '#EEF2FF' },
