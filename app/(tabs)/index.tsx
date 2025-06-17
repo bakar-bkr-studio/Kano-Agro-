@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, Dimensions, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Sun, Camera, Store, Truck, Phone, Bell, User, MapPin, Leaf, LogIn, UserPlus, BellOff, Navigation, CreditCard as Edit3, TrendingUp, Package, Activity, Calendar, Zap, Shield, Users, Sprout, X, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Clock } from 'lucide-react-native';
+import { Sun, Camera, Store, Truck, Phone, Bell, Star, User, MapPin, Leaf, LogIn, UserPlus, BellOff, Navigation, CreditCard as Edit3, TrendingUp, Package, Activity, Calendar, Zap, Shield, Users, Sprout, X, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, Clock } from 'lucide-react-native';
+import FavoritesModal, { FavoriteItem } from '@/components/FavoritesModal';
+import AuthPrompt from '@/components/marketplace/AuthPrompt';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
 
@@ -86,6 +88,20 @@ export default function HomeScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [currentTip, setCurrentTip] = useState(getDynamicTip());
+  const [weatherInfo] = useState({ temp: 28, icon: '☀️' });
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerPadding = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [20, 8],
+    extrapolate: 'clamp',
+  });
+
+  const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
   
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -137,6 +153,25 @@ export default function HomeScreen() {
 
   const handleLocationPress = () => {
     setShowLocationModal(true);
+  };
+
+  const handleFavoritesPress = () => {
+    if (user) {
+      setShowFavorites(true);
+    } else {
+      setShowAuthPrompt(true);
+    }
+  };
+
+  const handleSelectFavorite = (id: string) => {
+    setShowFavorites(false);
+    router.push('/(tabs)/marketplace');
+  };
+
+  const handleScroll = (event: any) => {
+    const offset = event.nativeEvent.contentOffset.y;
+    if (offset > 50 && !headerCollapsed) setHeaderCollapsed(true);
+    if (offset <= 50 && headerCollapsed) setHeaderCollapsed(false);
   };
 
   const animatePress = (callback: () => void, index?: number) => {
@@ -206,9 +241,9 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={{ opacity: fadeAnim }}>
-        <LinearGradient
+        <AnimatedLinearGradient
           colors={['#4ADE80', '#22C55E', '#16A34A']}
-          style={styles.header}
+          style={[styles.header, { paddingVertical: headerPadding }]}
         >
           <View style={styles.headerContent}>
             <TouchableOpacity style={styles.userInfo} onPress={handleProfilePress}>
@@ -222,14 +257,18 @@ export default function HomeScreen() {
               <View>
                 {user ? (
                   <>
-                    <Text style={styles.greeting}>Bonjour,</Text>
+                    {!headerCollapsed && (
+                      <Text style={styles.greeting}>Bonjour,</Text>
+                    )}
                     <Text style={styles.userName}>
                       {profile?.nom_complet || user?.email?.split('@')[0] || 'Utilisateur'}
                     </Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.greeting}>Bienvenue,</Text>
+                    {!headerCollapsed && (
+                      <Text style={styles.greeting}>Bienvenue,</Text>
+                    )}
                     <Text style={styles.userName}>Visiteur</Text>
                   </>
                 )}
@@ -237,8 +276,8 @@ export default function HomeScreen() {
             </TouchableOpacity>
             
             {hasNotifications && (
-              <TouchableOpacity 
-                style={styles.notificationButton} 
+              <TouchableOpacity
+                style={styles.notificationButton}
                 onPress={handleNotificationPress}
               >
                 <Bell size={24} color="#FFFFFF" />
@@ -249,15 +288,29 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={handleFavoritesPress}
+            >
+              <Star size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
           
-          <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
-            <MapPin size={16} color="#FFFFFF" />
-            <Text style={styles.locationText}>
-              {profile?.etat ? `${profile.etat}, Nigeria` : 'Kano, Nigeria'}
-            </Text>
-            <Navigation size={14} color="#FFFFFF" style={styles.locationIcon} />
-          </TouchableOpacity>
+          {!headerCollapsed && (
+          <View style={styles.infoRow}>
+            <TouchableOpacity style={styles.locationInfo} onPress={handleLocationPress}>
+              <MapPin size={16} color="#FFFFFF" />
+              <Text style={styles.locationText}>
+                {profile?.etat ? `${profile.etat}, Nigeria` : 'Kano, Nigeria'}
+              </Text>
+              <Navigation size={14} color="#FFFFFF" style={styles.locationIcon} />
+            </TouchableOpacity>
+            <View style={styles.weatherInfo}>
+              <Text style={styles.weatherText}>{weatherInfo.temp}°C</Text>
+              <Text style={styles.weatherIcon}>{weatherInfo.icon}</Text>
+            </View>
+          </View>
+          )}
 
           {/* Authentication buttons for non-connected users */}
           {!user && (
@@ -274,7 +327,15 @@ export default function HomeScreen() {
           )}
         </LinearGradient>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Animated.ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false, listener: handleScroll }
+          )}
+          scrollEventThrottle={16}
+        >
           {/* Enhanced Stats Cards */}
           <View style={styles.statsContainer}>
             <Animated.View style={[styles.statCard, styles.statCardPrimary, { transform: [{ scale: cardAnimations[0] }] }]}>
@@ -543,7 +604,7 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/* Notifications Modal */}
         <Modal
@@ -642,7 +703,24 @@ export default function HomeScreen() {
           </View>
         </Modal>
 
-        <AuthModal 
+        <FavoritesModal
+          visible={showFavorites}
+          favorites={favorites}
+          onClose={() => setShowFavorites(false)}
+          onSelect={handleSelectFavorite}
+        />
+
+        <AuthPrompt
+          visible={showAuthPrompt}
+          onClose={() => setShowAuthPrompt(false)}
+          onLogin={() => {
+            setShowAuthPrompt(false);
+            setAuthMode('signin');
+            setShowAuthModal(true);
+          }}
+        />
+
+        <AuthModal
           visible={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           initialMode={authMode}
@@ -745,6 +823,26 @@ const styles = StyleSheet.create({
   },
   locationIcon: {
     opacity: 0.8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  weatherInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  weatherText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  weatherIcon: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   authButtonsContainer: {
     flexDirection: 'row',
