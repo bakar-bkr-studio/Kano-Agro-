@@ -168,26 +168,6 @@ export function useAnnonces() {
 
   useEffect(() => {
     loadAnnonces();
-
-    // Subscribe to real-time changes
-    const subscription = supabase
-      .channel('annonces_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'annonces' 
-        }, 
-        () => {
-          // Reload annonces when changes occur
-          loadAnnonces();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   return {

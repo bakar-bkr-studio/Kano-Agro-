@@ -186,11 +186,14 @@ export function useAuth() {
       console.log('Updating profile for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+        .upsert(
+          {
+            id: user.id,
+            ...updates,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
         .select()
         .single();
 

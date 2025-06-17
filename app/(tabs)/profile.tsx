@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { User, Phone, MapPin, Building, Globe, Camera, CreditCard as Edit3, Save, X, Settings, Shield, Activity, Award, Users, Calendar, LogOut, Leaf, TrendingUp, Package, Clock, Mail } from 'lucide-react-native';
+import { User, Phone, MapPin, Building, Globe, Camera, CreditCard as Edit3, Save, X, Settings, Shield, Activity, Award, Users, Calendar, LogOut, Leaf, TrendingUp, Package, Clock, Mail, LogIn, UserPlus } from 'lucide-react-native';
+import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserStats } from '@/hooks/useUserStats';
@@ -61,11 +62,13 @@ export default function ProfileScreen() {
   const { etats, cultures, getCulturesByCategory, getEtatsByRegion } = useProfile();
   const { stats, loading: statsLoading, refreshStats } = useUserStats();
   const { annonces, loading: annoncesLoading, refreshAnnonces } = useUserAnnonces();
-  
+
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
   useEffect(() => {
     if (profile) {
@@ -126,7 +129,7 @@ export default function ProfileScreen() {
 
       const { error } = await updateProfile(cleanedFormData);
       if (error) {
-        Alert.alert('Erreur', 'Impossible de mettre à jour le profil.');
+        Alert.alert('Erreur', error.message || 'Impossible de mettre à jour le profil.');
       } else {
         Alert.alert('Succès', 'Profil mis à jour avec succès !');
         await Promise.all([refreshStats(), refreshAnnonces()]);
@@ -614,6 +617,28 @@ export default function ProfileScreen() {
           <Text style={styles.emptyStateText}>
             Veuillez vous connecter pour accéder à votre profil
           </Text>
+          <View style={styles.authButtonsContainer}>
+            <TouchableOpacity
+              style={styles.authButton}
+              onPress={() => {
+                setAuthMode('signin');
+                setShowAuthModal(true);
+              }}
+            >
+              <LogIn size={16} color="#16A34A" />
+              <Text style={styles.authButtonText}>Se connecter</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.authButton, styles.signUpButton]}
+              onPress={() => {
+                setAuthMode('signup');
+                setShowAuthModal(true);
+              }}
+            >
+              <UserPlus size={16} color="#FFFFFF" />
+              <Text style={[styles.authButtonText, styles.signUpButtonText]}>Créer un compte</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -825,6 +850,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <AuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
+      />
     </SafeAreaView>
   );
 }
@@ -863,6 +893,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  authButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  authButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  signUpButton: {
+    backgroundColor: '#16A34A',
+  },
+  authButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    color: '#16A34A',
+    marginLeft: 4,
+  },
+  signUpButtonText: {
+    color: '#FFFFFF',
   },
   header: {
     paddingHorizontal: 20,
