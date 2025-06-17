@@ -325,7 +325,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </LinearGradient>
+          </AnimatedLinearGradient>
 
         <Animated.ScrollView
           style={styles.content}
@@ -1366,3 +1366,4 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
+
